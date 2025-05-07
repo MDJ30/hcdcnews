@@ -10,6 +10,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
+import { WebView } from 'react-native-webview'; // Import WebView
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -189,25 +190,18 @@ const DashboardScreen = ({ navigation }: { navigation: any }) => {
             )}
             showsHorizontalScrollIndicator={false}
           />
-          <LiveGameCard>
-            <View style={{ position: 'relative', width: '100%', height: 200 }}>
-              <ShimmerPlaceholder
-                visible={!loadingImages['live']}
-                style={{ width: '100%', height: '100%', borderRadius: 10 }}
-              >
-                <Image
-                  source={require('../sports.jpg')}
-                  style={{ width: '100%', height: '100%', borderRadius: 10 }}
-                  onLoadStart={() => handleImageLoadStart('live')}
-                  onLoadEnd={() => handleImageLoadEnd('live')}
-                />
-              </ShimmerPlaceholder>
-            </View>
-            <LiveGameInfo>
-              <LiveText>LIVE</LiveText>
-              <GameTitle>Milwaukee Bucks vs Denver Nuggets</GameTitle>
-            </LiveGameInfo>
-          </LiveGameCard>
+           <LiveGameCard>
+          <WebView
+            source={{
+              uri: 'https://www.facebook.com/plugins/video.php?href=https://www.facebook.com/facebook/videos/10153231379946729/',
+            }} // Replace with your Facebook Live video URL
+            style={{ height: 300 }}
+          />
+          <LiveGameInfo>
+            <LiveText>LIVE</LiveText>
+            <GameTitle>Facebook Live Stream</GameTitle>
+          </LiveGameInfo>
+        </LiveGameCard>
         </ScrollView>
 
         {/* Modal for News Details */}

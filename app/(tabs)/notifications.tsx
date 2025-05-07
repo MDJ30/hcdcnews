@@ -2,18 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, Alert, ActivityIndicator, View, Text, Image, StyleSheet, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Define the Notification type
-type Notification = {
+type NotificationItem = {
   id: number;
   title: string;
   message: string;
-  date: string; // Date in string format (e.g., "2025-03-29T12:00:00Z")
+  date: string;
   program: string;
-  image: string; // Base64-encoded image
+  image: string;
   is_read: number;
 };
 
-// Utility function to calculate relative time
 const getRelativeTime = (dateString: string): string => {
   const notificationDate = new Date(dateString);
   const now = new Date();
@@ -28,13 +26,22 @@ const getRelativeTime = (dateString: string): string => {
   return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
 };
 
-const Notifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+const NotificationsScreen = () => {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
-  const [latestId, setLatestId] = useState<number | null>(null); // Track the latest notification ID
+  const [refreshing, setRefreshing] = useState(false);
+  const [latestId, setLatestId] = useState<number | null>(null);
 
-  // Function to fetch notifications from the server
+  useEffect(() => {
+    fetchNotifications();
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 1800000); // fetch every 30 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -44,13 +51,11 @@ const Notifications = () => {
       if (data.notifications && Array.isArray(data.notifications)) {
         setNotifications(data.notifications);
 
-        // Check if there's a new notification
         if (latestId !== null && data.notifications[0]?.id > latestId) {
           const newNotification = data.notifications[0];
           sendPushNotification(newNotification.title, newNotification.message);
         }
 
-        // Update the latest notification ID
         if (data.notifications.length > 0) {
           setLatestId(data.notifications[0].id);
         }
@@ -59,28 +64,23 @@ const Notifications = () => {
         Alert.alert('Error', data.error);
       } else {
         console.error('Unexpected response format:', data);
-        Alert.alert('Error', 'Unexpected response from the server.');
+        Alert.alert('Error', 'Unexpected server response.');
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-      Alert.alert('Error', 'Failed to fetch notifications. Please try again later.');
+      console.error('Fetch error:', error);
+      Alert.alert('Error', 'Could not fetch notifications.');
     } finally {
       setLoading(false);
-      setRefreshing(false); // Stop the pull-to-refresh spinner
+      setRefreshing(false);
     }
   };
 
-  // Function to send a push notification using the Native Notify API
   const sendPushNotification = async (title: string, message: string) => {
-    const currentDate = new Date();
-    const formattedDate = `${currentDate.getMonth() + 1}-${currentDate.getDate()}-${currentDate.getFullYear()} ${currentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
-
     const body = {
-      appId: 28771,
-      appToken: "1hDYM684l2hCrLR9c006pt",
+      appId: 28771, // your Native Notify app ID
+      appToken: "1hDYM684l2hCrLR9c006pt", // your Native Notify app token
       title: title,
       body: message,
-      dateSent: formattedDate,
     };
 
     try {
@@ -93,21 +93,15 @@ const Notifications = () => {
       });
 
       if (response.ok) {
-        console.log('Push notification sent successfully');
+        console.log('Push notification sent successfully.');
       } else {
-        console.error('Failed to send push notification:', response.statusText);
+        console.error('Failed to send push notification:', await response.text());
       }
     } catch (error) {
       console.error('Error sending push notification:', error);
     }
   };
 
-  // Fetch notifications when the component mounts
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  // Handle pull-to-refresh
   const onRefresh = () => {
     setRefreshing(true);
     fetchNotifications();
@@ -126,9 +120,7 @@ const Notifications = () => {
           <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
         ) : (
           <ScrollView
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ffffff" />
-            }
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ffffff" />}
           >
             {notifications.map((notification) => (
               <View key={notification.id} style={styles.notificationContainer}>
@@ -141,6 +133,7 @@ const Notifications = () => {
                 <View style={styles.notificationContent}>
                   <Text style={styles.notificationTitle}>{notification.title}</Text>
                   <Text style={styles.notificationMessage}>{notification.message}</Text>
+                  <Text style={styles.notificationMessage}>{notification.program}</Text>
                   <Text style={styles.notificationDate}>{getRelativeTime(notification.date)}</Text>
                 </View>
               </View>
@@ -159,14 +152,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#000', // Black background
+    backgroundColor: '#000',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-    color: '#fff', // White text for the title
+    color: '#fff',
   },
   loader: {
     marginTop: 20,
@@ -175,11 +168,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#444', // Dark gray border
+    borderColor: '#444',
     borderRadius: 10,
     padding: 10,
     marginBottom: 15,
-    backgroundColor: '#1c1c1e', // Dark gray background for each notification
+    backgroundColor: '#1c1c1e',
   },
   logo: {
     width: 50,
@@ -193,19 +186,19 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff', // White text for the notification title
+    color: '#fff',
     marginBottom: 5,
   },
   notificationMessage: {
     fontSize: 14,
-    color: '#ccc', // Light gray text for the message
+    color: '#ccc',
     marginBottom: 5,
   },
   notificationDate: {
     fontSize: 12,
-    color: '#999', // Gray text for the date
+    color: '#999',
     textAlign: 'right',
   },
 });
 
-export default Notifications;
+export default NotificationsScreen;
